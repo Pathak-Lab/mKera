@@ -1,0 +1,107 @@
+baseimage = getTitle(); //base image
+run("Set Scale...", "distance=1 known=0.1092 pixel=1 unit=µm");
+run("Arrange Channels...", "new=23");
+
+selectWindow(baseimage);
+run("Split Channels"); //Split base image into seperate channels
+image_DIC= "C2-"+baseimage 
+image_tdt = "C1-"+baseimage 
+
+//tdtomato
+selectWindow(image_tdt); //selects 561 channel video
+run("Red");
+run("Z Project...", "projection type = Median"); //finds average pixel intensity
+TDT_med = getTitle(); //base image
+imageCalculator( "subtract create 32-bit stack", image_tdt, TDT_med);
+TDT_1 = getTitle()
+run("Z Project...", "projection=[Min Intensity]");
+TDT_min = getTitle();
+imageCalculator( "subtract create 32-bit stack", TDT_1, TDT_min);
+run("Enhance Contrast", "saturated=0.35");
+rename("tdt corrected");
+tdt_corrected= getTitle();
+run("Duplicate...", "duplicate");
+run("RGB Color");
+rename("tdt_RGB");
+tdt_RGB = getTitle();
+selectWindow(TDT_med);
+close();
+selectWindow(TDT_min);
+close();
+selectWindow(image_tdt);
+close();
+selectWindow(TDT_1);
+close();
+
+//DIC
+selectWindow(image_DIC);
+run("Grays");
+run("Z Project...", "projection=Median");
+med_DIC = getTitle(); //saves average image as var
+imageCalculator( "divide create 32-bit stack", image_DIC, med_DIC); 
+run("Enhance Contrast", "saturated=0.35");
+rename("Shade Corrected");
+DIC_corrected= getTitle();
+run("Duplicate...", "duplicate");
+run("RGB Color");
+rename("DIC_RGB");
+DIC_RGB = getTitle();
+selectWindow(med_DIC);
+close();
+selectWindow(image_DIC);
+close();
+
+//Create Merged Videos
+run("Merge Channels...", "c1=[tdt corrected] c4=[Shade Corrected] create keep");
+TIRFM_DIC = getTitle();
+run("RGB Color", "frames keep");
+rename("TIRFM_DIC_RGB");
+
+//Create Combined Videos
+run("Combine...", "stack1=TIRFM_DIC_RGB stack2=tdt_RGB");
+rename("Combo1");
+Combo1 = getTitle();
+run("Combine...", "stack1=Combo1 stack2=DIC_RGB");
+rename("Combo_Final");
+Combo_Final = getTitle();
+
+//Add Scale Bars & Time Stamps
+selectWindow(Combo_Final);
+run("Label...", "format=00:00 starting=0 interval=10 x=5 y=20 font=25 text=hh:mm range=1-105 use");
+run("Scale Bar...", "width=20 height=15 font=25 color=White background=None location=[Lower Right] bold label");
+//selectWindow(DIC_corrected);
+//run("Label...", "format=00:00 starting=0 interval=15 x=5 y=20 font=25 text=hh:mm range=1-105 use");
+//run("Scale Bar...", "width=20 height=15 font=25 color=White background=None location=[Lower Right] bold overlay label");
+//selectWindow(tdt_corrected);
+//run("Label...", "format=00:00 starting=0 interval=15 x=5 y=20 font=25 text=hh:mm range=1-105 use");
+//run("Scale Bar...", "width=20 height=15 font=25 color=White background=None location=[Lower Right] bold overlay label");
+
+//house-keeping
+len=lengthOf(baseimage) //gets length of shae corrected movie name stores as variable len
+index2=len-8 //ignores the last 8 string values .ome.tif
+sub=substring(baseimage,0,index2) //saves this truncated image name
+
+selectWindow(tdt_corrected)
+rename(sub+"_561_channel.ome.tif")
+save_name1=getTitle();
+saveAs("Tiff", ""+save_name1);
+selectWindow(DIC_corrected)
+rename(sub+"_DIC_channel.ome.tif")
+save_name2=getTitle();
+saveAs("Tiff", ""+save_name2);
+selectWindow(Combo_Final)
+rename(sub+"_combined.ome.tif")
+save_name3=getTitle();
+saveAs("Tiff", ""+save_name3);
+selectWindow(TIRFM_DIC)
+rename(sub+"_merged.ome.tif")
+save_name4=getTitle();
+saveAs("Tiff", ""+save_name4);
+
+selectWindow(save_name1);
+close();
+selectWindow(save_name2);
+close();
+selectWindow(save_name3);
+close();
+selectWindow(save_name4);
